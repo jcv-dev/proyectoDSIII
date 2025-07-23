@@ -1,0 +1,196 @@
+# kubernetes/02-services.yaml
+
+# Helper ConfigMap for service URLs
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-config
+data:
+  PERSISTENCE_SERVICE_URL: "http://10.244.0.8:80"
+  RABBITMQ_HOST: "rabbitmq-svc"
+  MONGO_URL: "mongodb://root:example@mongo-svc:27017/"
+  DATABASE_URL: "postgresql://user:password@postgres-svc:5432/db"
+
+---
+# --- URL Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: url-service
+  template:
+    metadata:
+      labels:
+        app: url-service
+    spec:
+      containers:
+      - name: url-service
+        image: url-service:v13 # Replace with your image name
+        imagePullPolicy: IfNotPresent # Use this for local images
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-service
+spec:
+  selector:
+    app: url-service
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+# --- Redirect Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redirect-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redirect-service
+  template:
+    metadata:
+      labels:
+        app: redirect-service
+    spec:
+      containers:
+      - name: redirect-service
+        image: redirect-service:v5
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redirect-service
+spec:
+  selector:
+    app: redirect-service
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: persistence-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: persistence-service
+  template:
+    metadata:
+      labels:
+        app: persistence-service
+    spec:
+      containers:
+      - name: persistence-service
+        image: persistence-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        env: # Add this section for explicit environment variables
+        - name: DATABASE_URL
+          value: "postgresql://user:password@postgres-svc:5432/db" # Change localhost to postgres-svc
+        envFrom:
+        - configMapRef:
+            name: service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: persistence-service
+spec:
+  selector:
+    app: persistence-service
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+# --- Analytics Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+      - name: analytics-service
+        image: analytics-service:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+spec:
+  selector:
+    app: analytics-service
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+# --- Frontend Service ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: frontend:v6
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
