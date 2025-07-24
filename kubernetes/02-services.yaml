@@ -6,7 +6,7 @@ kind: ConfigMap
 metadata:
   name: service-config
 data:
-  PERSISTENCE_SERVICE_URL: "http://10.244.0.8:80"
+  PERSISTENCE_SERVICE_URL: "http://persistence-service:80"
   RABBITMQ_HOST: "rabbitmq-svc"
   MONGO_URL: "mongodb://root:example@mongo-svc:27017/"
   DATABASE_URL: "postgresql://user:password@postgres-svc:5432/db"
@@ -142,7 +142,7 @@ spec:
     spec:
       containers:
       - name: analytics-service
-        image: analytics-service:v2
+        image: analytics-service:v4
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
